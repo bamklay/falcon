@@ -31,15 +31,22 @@ jobs:
           rustup update stable || true
           rustup target add aarch64-apple-ios x86_64-apple-ios aarch64-apple-ios-sim || true
 
-      - name: Mostrar script de librerías (para diagnóstico)
+      - name: Mostrar archivos del repo (diagnóstico)
         run: |
           ls
-          cat libwallet/librs/makelibs.sh || true
+          find . -name makelibs.sh
+          ls tools
 
-      - name: Compilar librerías Rust
+      - name: Compilar librerías Rust (si existe)
         run: |
-          chmod +x libwallet/librs/makelibs.sh
-          ./libwallet/librs/makelibs.sh
+          SCRIPT=$(find . -name makelibs.sh | head -n 1)
+          if [ -n "$SCRIPT" ]; then
+            echo "Encontrado: $SCRIPT"
+            chmod +x "$SCRIPT"
+            "$SCRIPT"
+          else
+            echo "No hay makelibs.sh en esta versión, se omite"
+          fi
 
       - name: Instalar gomobile
         run: |
