@@ -30,13 +30,11 @@ jobs:
         run: |
           rustup update stable || true
           rustup target add aarch64-apple-ios x86_64-apple-ios aarch64-apple-ios-sim || true
-
       - name: Mostrar archivos del repo (diagnóstico)
         run: |
           ls
           find . -name makelibs.sh
           ls tools
-
       - name: Compilar librerías Rust (si existe)
         run: |
           SCRIPT=$(find . -name makelibs.sh | head -n 1)
@@ -47,30 +45,26 @@ jobs:
           else
             echo "No hay makelibs.sh en esta versión, se omite"
           fi
-
       - name: Instalar gomobile
         run: |
           chmod +x tools/bootstrap-gomobile.sh
           ./tools/bootstrap-gomobile.sh
-
       - name: Instalar CocoaPods
         run: |
           cd falcon/app
           pod install
-
       - name: Compilar app
         run: |
           WS=$(find falcon/app -maxdepth 1 -name "*.xcworkspace" | head -n 1)
           echo "Workspace: $WS"
           xcodebuild -list -workspace "$WS"
-          SCHEME=$(xcodebuild -list -json -workspace "$WS" | python3 -c "import sys,json; d=json.load(sys.stdin); s=d['workspace']['schemes']; print([x for x in s if 'Pods' not in x][0])")
+          SCHEME="Muun"
           echo "Scheme: $SCHEME"
           xcodebuild -workspace "$WS" -scheme "$SCHEME" \
             -configuration Release -sdk iphoneos \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             build
-
       - name: Crear IPA
         run: |
           APP=$(find build/Build/Products -name "*.app" -maxdepth 3 | head -n 1)
@@ -78,7 +72,6 @@ jobs:
           mkdir -p Payload
           cp -R "$APP" Payload/
           zip -r Muun.ipa Payload
-
       - name: Subir IPA
         uses: actions/upload-artifact@v4
         with:
