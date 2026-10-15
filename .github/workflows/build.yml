@@ -49,6 +49,11 @@ jobs:
         run: |
           chmod +x tools/bootstrap-gomobile.sh
           ./tools/bootstrap-gomobile.sh
+      - name: Compilar Libwallet (xcframework)
+        run: |
+          chmod +x tools/libwallet-ios.sh
+          ./tools/libwallet-ios.sh
+          ls -la falcon/core
       - name: Instalar CocoaPods
         run: |
           cd falcon/app
