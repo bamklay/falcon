@@ -58,6 +58,14 @@ jobs:
         run: |
           cd falcon/app
           pod install
+      - name: Script de IP local (solo debug, se omite en Release)
+        run: |
+          ls -la tools
+          if [ ! -f tools/ios-assign-localhost-ip-for-debug.sh ]; then
+            echo "Falta el script, se crea uno vacio"
+            printf '#!/bin/sh\nexit 0\n' > tools/ios-assign-localhost-ip-for-debug.sh
+          fi
+          chmod +x tools/ios-assign-localhost-ip-for-debug.sh
       - name: Compilar app
         run: |
           WS=$(find falcon/app -maxdepth 1 -name "*.xcworkspace" | head -n 1)
