@@ -81,6 +81,19 @@ jobs:
           open(p, "w").write(s)
           PY
           sed -n 1,30p "$F"
+      - name: Parche - usar entorno de produccion (prod) en vez de debug
+        run: |
+          FILES=$(grep -rl "static let current: Environment = .debug" falcon --include=*.swift || true)
+          if [ -z "$FILES" ]; then
+            echo "No se encontro la linea del entorno"
+            exit 1
+          fi
+          for f in $FILES; do
+            echo "Parcheando: $f"
+            sed -i '' 's/static let current: Environment = \.debug/static let current: Environment = .prod/' "$f"
+          done
+          echo "--- Resultado ---"
+          grep -rn "static let current: Environment" falcon --include=*.swift
       - name: Compilar app
         run: |
           WS=$(find falcon/app -maxdepth 1 -name "*.xcworkspace" | head -n 1)
