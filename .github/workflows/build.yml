@@ -66,6 +66,21 @@ jobs:
             printf '#!/bin/sh\nexit 0\n' > tools/ios-assign-localhost-ip-for-debug.sh
           fi
           chmod +x tools/ios-assign-localhost-ip-for-debug.sh
+      - name: Parche - desactivar CloudKit (Apple ID gratuito no tiene iCloud)
+        run: |
+          F="falcon/app/falcon/core/Data/Service/CapabilitiesProvider/ICloudCapabilitiesProvider.swift"
+          test -f "$F" || { echo "No existe $F"; find falcon -name "ICloudCapabilitiesProvider.swift"; exit 1; }
+          python3 - "$F" <<'PY'
+          import sys
+          p = sys.argv[1]
+          s = open(p).read()
+          old = "public func setup() {"
+          new = "public func setup() {\n        let icloudDisabled = true\n        if icloudDisabled { return }"
+          assert old in s, "No se encontro setup()"
+          s = s.replace(old, new, 1)
+          open(p, "w").write(s)
+          PY
+          sed -n 1,30p "$F"
       - name: Compilar app
         run: |
           WS=$(find falcon/app -maxdepth 1 -name "*.xcworkspace" | head -n 1)
