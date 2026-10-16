@@ -1,0 +1,46 @@
+name: Diagnostico Muun (rapido)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag o commit a revisar"
+        default: "2.9.2"
+        required: true
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: 1 - Entitlements y carpeta tools
+        run: |
+          echo "=== falcon.entitlements ==="
+          cat falcon/app/falcon/falcon.entitlements || true
+          echo "=== ls tools ==="
+          ls -la tools || true
+          echo "=== ios-assign-localhost-ip-for-debug.sh ==="
+          cat tools/ios-assign-localhost-ip-for-debug.sh || echo "NO EXISTE en este tag"
+
+      - name: 2 - Configuraciones de build y schemes
+        run: |
+          P=falcon/app/falcon.xcodeproj/project.pbxproj
+          echo "=== nombres de configuraciones ==="
+          grep -o 'name = [A-Za-z0-9_-]*;' "$P" | sort | uniq -c | sort -rn | head -40 || true
+          echo "=== flags de compilacion ==="
+          grep -n "SWIFT_ACTIVE_COMPILATION_CONDITIONS" "$P" | head -30 || true
+          echo "=== schemes ==="
+          find falcon/app -name "*.xcscheme" -not -path "*/Pods/*" || true
+
+      - name: 3 - Donde se define el entorno en el codigo
+        run: |
+          echo "=== archivos con Environment ==="
+          grep -rIl --include=*.swift -i "environment" falcon/app/falcon | head -30 || true
+          echo "=== directivas #if ==="
+          grep -rIn --include=*.swift -E "#if (DEBUG|REGTEST|STAGING|DEV|PROD)" falcon/app/falcon | head -40 || true
+          echo "=== texto debug ==="
+          grep -rIn --include=*.swift -i '"debug"' falcon/app/falcon | head -20 || true
