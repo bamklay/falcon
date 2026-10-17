@@ -107,6 +107,50 @@ jobs:
           open(p, "w").write(new)
           PY
           sed -n 25,45p "$F"
+      - name: Parche - DeviceCheck no disponible (usar token de respaldo)
+        run: |
+          python3 - <<'PY'
+          import sys
+          def patch(path, old, new):
+              s = open(path).read()
+              assert old in s, "No se encontro en " + path + ": " + old
+              open(path, "w").write(s.replace(old, new, 1))
+          patch("falcon/app/falcon/AppDelegate.swift",
+                "if DCDevice.current.isSupported {",
+                "if false && DCDevice.current.isSupported {")
+          patch("falcon/app/falcon/core/Data/Service/AppleDeviceCheckAdapter.swift",
+                "return DCDevice.current.isSupported",
+                "return false")
+          PY
+          grep -n "isSupported" falcon/app/falcon/AppDelegate.swift falcon/app/falcon/core/Data/Service/AppleDeviceCheckAdapter.swift
+      - name: Depuracion - mostrar el error real de sincronizacion en pantalla
+        run: |
+          python3 - <<'PY'
+          import sys
+
+          def patch(path, old, new):
+              s = open(path).read()
+              assert old in s, "No se encontro en " + path + ": " + old
+              open(path, "w").write(s.replace(old, new, 1))
+
+          # 1) Variable global con el ultimo error de sincronizacion
+          patch("falcon/app/falcon/Presentation/Screen/Sync/SyncPresenter.swift",
+                "import RxSwift",
+                "import RxSwift\n\nvar muunLastSyncError: String = \"\"")
+          patch("falcon/app/falcon/Presentation/Screen/Sync/SyncPresenter.swift",
+                "delegate.syncFailed()",
+                "muunLastSyncError = String(describing: result.error!)\n            delegate.syncFailed()")
+
+          # 2) Mostrar el error en una alerta antes de ir a la pantalla de sesion expirada
+          patch("falcon/app/falcon/Presentation/Screen/Sync/SyncViewController.swift",
+                "navigationController!.setViewControllers([SessionExpiredViewController()], animated: true)",
+                '''let muunAlert = UIAlertController(title: "Sync error", message: muunLastSyncError, preferredStyle: .alert)
+                  muunAlert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+                      self.navigationController!.setViewControllers([SessionExpiredViewController()], animated: true)
+                  })
+                  self.present(muunAlert, animated: true)''')
+          PY
+          grep -n "muunLastSyncError" falcon/app/falcon/Presentation/Screen/Sync/SyncPresenter.swift falcon/app/falcon/Presentation/Screen/Sync/SyncViewController.swift
       - name: Compilar app
         run: |
           WS=$(find falcon/app -maxdepth 1 -name "*.xcworkspace" | head -n 1)
