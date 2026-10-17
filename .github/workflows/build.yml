@@ -7,6 +7,10 @@ on:
         description: "Tag o commit a compilar (ej: 2.9.2)"
         default: "2.9.2"
         required: true
+      devicecheck_off:
+        description: "Desactivar DeviceCheck (true o false)"
+        default: "true"
+        required: true
 
 jobs:
   build:
@@ -108,6 +112,7 @@ jobs:
           PY
           sed -n 25,45p "$F"
       - name: Parche - DeviceCheck no disponible (usar token de respaldo)
+        if: ${{ github.event.inputs.devicecheck_off == 'true' }}
         run: |
           python3 - <<'PY'
           import sys
@@ -136,15 +141,20 @@ jobs:
           # 1) Variable global con el ultimo error de sincronizacion
           patch("falcon/app/falcon/Presentation/Screen/Sync/SyncPresenter.swift",
                 "import RxSwift",
-                "import RxSwift\n\nvar muunLastSyncError: String = \"\"")
+                "import RxSwift\n\nvar muunLastSyncError: String = \"\"\n\nvar muunLastFailedURL: String = \"\"")
           patch("falcon/app/falcon/Presentation/Screen/Sync/SyncPresenter.swift",
                 "delegate.syncFailed()",
                 "muunLastSyncError = String(describing: result.error!)\n            delegate.syncFailed()")
 
+          # 1b) Guardar la URL de la peticion que falla
+          patch("falcon/app/falcon/core/Data/Service/Base/BaseService.swift",
+                "if let someError = self.parseError(data: data, error: error, response: response) {",
+                "if let someError = self.parseError(data: data, error: error, response: response) {\n                muunLastFailedURL = response?.url?.absoluteString ?? \"\"")
+
           # 2) Mostrar el error en una alerta antes de ir a la pantalla de sesion expirada
           patch("falcon/app/falcon/Presentation/Screen/Sync/SyncViewController.swift",
                 "navigationController!.setViewControllers([SessionExpiredViewController()], animated: true)",
-                '''let muunAlert = UIAlertController(title: "Sync error", message: muunLastSyncError, preferredStyle: .alert)
+                '''let muunAlert = UIAlertController(title: "Sync error", message: muunLastSyncError + " | URL: " + muunLastFailedURL, preferredStyle: .alert)
                   muunAlert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
                       self.navigationController!.setViewControllers([SessionExpiredViewController()], animated: true)
                   })
@@ -152,7 +162,8 @@ jobs:
 
           # SwiftLint falla si se supera el umbral de avisos (1196): se desactiva en estos 2 archivos
           for p in ("falcon/app/falcon/Presentation/Screen/Sync/SyncPresenter.swift",
-                    "falcon/app/falcon/Presentation/Screen/Sync/SyncViewController.swift"):
+                    "falcon/app/falcon/Presentation/Screen/Sync/SyncViewController.swift",
+                    "falcon/app/falcon/core/Data/Service/Base/BaseService.swift"):
               s = open(p).read()
               open(p, "w").write("// swiftlint:disable all\n" + s)
           PY
