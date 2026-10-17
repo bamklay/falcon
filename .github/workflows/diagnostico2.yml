@@ -1,0 +1,40 @@
+name: Diagnostico 2 Muun (sesion y llavero)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag o commit a revisar"
+        default: "2.9.2"
+        required: true
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: A - Uso del llavero (Keychain)
+        run: |
+          echo "=== kSecAttrAccessGroup ==="
+          grep -rIn --include=*.swift "kSecAttrAccessGroup" falcon/app/falcon | head -20 || true
+          echo "=== group.com.muun.falcon ==="
+          grep -rIn "group.com.muun.falcon" falcon/app --include=*.swift --include=*.plist --include=*.entitlements | grep -v "/Pods/" | head -20 || true
+          echo "=== archivos Keychain ==="
+          find falcon/app/falcon -iname "*keychain*" | head -20 || true
+
+      - name: B - Codigo del llavero (primeras lineas)
+        run: |
+          F=$(find falcon/app/falcon -name "KeychainRepository.swift" | head -n 1)
+          echo "Archivo: $F"
+          sed -n 1,160p "$F" || true
+
+      - name: C - Donde sale la pantalla de sesion expirada
+        run: |
+          echo "=== textos en espanol ==="
+          grep -rIn "expirado\|finalizado" falcon/app/falcon --include=*.strings | head -10 || true
+          echo "=== codigo de sesion expirada ==="
+          grep -rIln --include=*.swift -i "sessionExpired\|session_expired\|SessionExpired\|expired_session" falcon/app/falcon | head -20 || true
