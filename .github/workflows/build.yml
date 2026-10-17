@@ -94,6 +94,19 @@ jobs:
           done
           echo "--- Resultado ---"
           grep -rn "static let current: Environment" falcon --include=*.swift
+      - name: Parche - llavero sin grupo de acceso (Apple ID gratuito)
+        run: |
+          F="falcon/app/falcon/core/Data/KeychainRepository.swift"
+          test -f "$F" || { echo "No existe $F"; exit 1; }
+          python3 - "$F" <<'PY'
+          import re, sys
+          p = sys.argv[1]
+          s = open(p).read()
+          new, n = re.subn(r",\s*kSecAttrAccessGroup as String: group\]", "]", s, count=1)
+          assert n == 1, "No se encontro kSecAttrAccessGroup"
+          open(p, "w").write(new)
+          PY
+          sed -n 25,45p "$F"
       - name: Compilar app
         run: |
           WS=$(find falcon/app -maxdepth 1 -name "*.xcworkspace" | head -n 1)
