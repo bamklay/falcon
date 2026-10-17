@@ -1,0 +1,39 @@
+name: Diagnostico 5 Muun (DeviceCheck)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag o commit a revisar"
+        default: "2.9.2"
+        required: true
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: A - AppleDeviceCheckAdapter y AppDelegate (token del dispositivo)
+        run: |
+          echo "=== AppleDeviceCheckAdapter.swift ==="
+          cat falcon/app/falcon/core/Data/Service/AppleDeviceCheckAdapter.swift || true
+          echo "=== AppDelegate.swift lineas 100-150 ==="
+          sed -n 100,150p falcon/app/falcon/AppDelegate.swift || true
+
+      - name: B - DeviceCheckTokenProvider
+        run: |
+          F=$(find falcon/app/falcon -name "DeviceCheckTokenProvider*.swift" | head -n 1)
+          echo "Archivo: $F"
+          sed -n 1,200p "$F" || true
+
+      - name: C - BaseService (envio del token)
+        run: |
+          sed -n 230,275p falcon/app/falcon/core/Data/Service/Base/BaseService.swift || true
+
+      - name: D - SyncAction
+        run: |
+          sed -n 1,200p falcon/app/falcon/core/Domain/Action/Session/SyncAction.swift || true
