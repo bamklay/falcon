@@ -1,0 +1,36 @@
+name: Diagnostico 4 Muun (sincronizacion)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag o commit a revisar"
+        default: "2.9.2"
+        required: true
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: A - Donde se dispara syncFailed y archivos de Sync
+        run: |
+          echo "=== syncFailed ==="
+          grep -rn "syncFailed" falcon/app/falcon --include=*.swift | head -20 || true
+          echo "=== archivos con Sync en el nombre ==="
+          find falcon/app/falcon -iname "*sync*" -name "*.swift" | head -30 || true
+
+      - name: B - SyncPresenter
+        run: |
+          F=$(find falcon/app/falcon -name "SyncPresenter.swift" | head -n 1)
+          echo "Archivo: $F"
+          sed -n 1,200p "$F" || true
+
+      - name: C - Registro de sesion nueva (primera sesion)
+        run: |
+          echo "=== createFirstSession / DeviceCheck ==="
+          grep -rn --include=*.swift -i "deviceCheck\|createFirstSession\|DCDevice\|fallbackDeviceToken" falcon/app/falcon | head -40 || true
