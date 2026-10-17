@@ -1,0 +1,42 @@
+name: Diagnostico 3 Muun (sesion expirada)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag o commit a revisar"
+        default: "2.9.2"
+        required: true
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: A - Presenter de la pantalla de sesion expirada
+        run: |
+          sed -n 1,120p falcon/app/falcon/Presentation/Screen/SessionExpired/SessionExpiredPresenter.swift || true
+
+      - name: B - Errores que llevan a sesion expirada
+        run: |
+          echo "=== BaseError.swift ==="
+          grep -n -i -B6 -A6 "sessionExpired" falcon/app/falcon/core/Data/Service/Base/BaseError.swift || true
+          echo "=== DomainError.swift ==="
+          grep -n -i -B6 -A6 "sessionExpired" falcon/app/falcon/core/Domain/Model/Muun/DomainError.swift || true
+
+      - name: C - Quien muestra la pantalla
+        run: |
+          echo "=== BasePresenter.swift ==="
+          grep -n -i -B8 -A8 "sessionExpired" falcon/app/falcon/Presentation/Screen/Base/BasePresenter.swift || true
+          echo "=== SyncViewController.swift ==="
+          grep -n -i -B8 -A8 "sessionExpired" falcon/app/falcon/Presentation/Screen/Sync/SyncViewController.swift || true
+          echo "=== NotificationProcessor.swift ==="
+          grep -n -i -B5 -A5 "sessionExpired" falcon/app/falcon/core/Domain/Notifications/NotificationProcessor.swift || true
+
+      - name: D - Respuestas del servidor (BaseService)
+        run: |
+          grep -n -i -B4 -A12 "sessionExpired\|401\|403\|unauthor" falcon/app/falcon/core/Data/Service/Base/BaseService.swift | head -150 || true
